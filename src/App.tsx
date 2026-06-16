@@ -7,7 +7,7 @@ import AddTaskModal from './components/AddTaskModal';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
 
 function App() {
   const { isAuthenticated } = useAuth();
