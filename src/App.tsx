@@ -35,14 +35,6 @@ function App() {
           setTasks(data.map((task: any) => ({
             ...task,
             id: String(task.id),
-            assigneeId: String(task.assigneeId),
-            assignee: task.assignee ? {
-              id: String(task.assignee.id),
-              name: task.assignee.name,
-              email: task.assignee.email,
-              avatar: task.assignee.avatar,
-              role: task.assignee.role,
-            } : null,
           })));
         }
       } catch (error) {
@@ -112,10 +104,7 @@ function App() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...taskData,
-          assigneeId: parseInt(taskData.assigneeId),
-        }),
+        body: JSON.stringify(taskData),
       });
 
       if (response.ok) {
@@ -123,14 +112,6 @@ function App() {
         const newTask: Task = {
           ...data,
           id: String(data.id),
-          assigneeId: String(data.assigneeId),
-          assignee: data.assignee ? {
-            id: String(data.assignee.id),
-            name: data.assignee.name,
-            email: data.assignee.email,
-            avatar: data.assignee.avatar,
-            role: data.assignee.role,
-          } : null,
         };
         setTasks((prevTasks) => [...prevTasks, newTask]);
       }

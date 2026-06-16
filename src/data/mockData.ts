@@ -1,15 +1,15 @@
 import { User, users } from '../types/auth';
-import { Task } from '../types';
+import { Task, Column, TaskStatus } from '../types';
 
 export type { User };
 export type { Task };
 export { users };
 
-export const columns = [
-  { id: 'todo', title: '待办', color: '#94a3b8', bgColor: '#f1f5f9' },
-  { id: 'in-progress', title: '进行中', color: '#3b82f6', bgColor: '#dbeafe' },
-  { id: 'review', title: '审核', color: '#f59e0b', bgColor: '#fef3c7' },
-  { id: 'done', title: '完成', color: '#10b981', bgColor: '#d1fae5' },
+export const columns: Column[] = [
+  { id: 'todo' as TaskStatus, title: '待办', color: '#94a3b8', bgColor: '#f1f5f9' },
+  { id: 'in-progress' as TaskStatus, title: '进行中', color: '#3b82f6', bgColor: '#dbeafe' },
+  { id: 'review' as TaskStatus, title: '审核', color: '#f59e0b', bgColor: '#fef3c7' },
+  { id: 'done' as TaskStatus, title: '完成', color: '#10b981', bgColor: '#d1fae5' },
 ];
 
 export const initialTasks: Task[] = [

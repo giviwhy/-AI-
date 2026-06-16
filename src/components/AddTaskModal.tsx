@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { TaskStatus } from '../types';
+import { Task, TaskStatus } from '../types';
 import { teamMembers } from '../data/mockData';
 
 interface AddTaskModalProps {
@@ -21,7 +21,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    
+
     onAdd({
       title: title.trim(),
       description: description.trim(),
@@ -31,7 +31,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       dueDate: dueDate || new Date().toISOString().split('T')[0],
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
     });
-    
+
     setTitle('');
     setDescription('');
     setPriority('medium');
@@ -55,7 +55,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
             <X size={20} className="text-gray-500" />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -70,7 +70,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               任务描述
@@ -83,7 +83,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               rows={3}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -99,7 +99,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
                 <option value="high">高</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 截止日期
@@ -112,7 +112,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               />
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               负责人
@@ -130,7 +130,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               ))}
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               标签（用逗号分隔）
@@ -143,7 +143,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               placeholder="例如：前端, 设计"
             />
           </div>
-          
+
           <div className="flex gap-3 pt-4">
             <button
               type="button"
