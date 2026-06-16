@@ -7,7 +7,7 @@ import AddTaskModal from './components/AddTaskModal';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 
-const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
+const API_URL = ''; // 部署到 Vercel 后使用相对路径
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -21,7 +21,10 @@ function App() {
   useEffect(() => {
     const fetchTasks = async () => {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         const response = await fetch(`${API_URL}/api/tasks`, {
@@ -35,6 +38,7 @@ function App() {
           setTasks(data.map((task: any) => ({
             ...task,
             id: String(task.id),
+            assignee: task.assignee || '未分配',
           })));
         }
       } catch (error) {
@@ -120,6 +124,24 @@ function App() {
     }
   }, []);
 
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      await fetch(`${API_URL}/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+  }, []);
+
   const handleOpenAddModal = (status: string) => {
     setNewTaskStatus(status as TaskStatus);
     setIsModalOpen(true);
@@ -157,6 +179,7 @@ function App() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onAddTask={handleOpenAddModal}
+              onDeleteTask={handleDeleteTask}
               isDropTarget={dropTargetColumn === column.id}
             />
           ))}

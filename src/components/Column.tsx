@@ -10,6 +10,7 @@ interface ColumnProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, status: string) => void;
   onAddTask: (status: string) => void;
+  onDeleteTask: (taskId: string) => void;
   isDropTarget: boolean;
 }
 
@@ -21,6 +22,7 @@ export default function Column({
   onDragOver,
   onDrop,
   onAddTask,
+  onDeleteTask,
   isDropTarget,
 }: ColumnProps) {
   return (
@@ -47,7 +49,7 @@ export default function Column({
           <Plus size={18} className="text-gray-500" />
         </button>
       </div>
-      
+
       <div className="space-y-3">
         {tasks.map((task) => (
           <TaskCard
@@ -55,9 +57,10 @@ export default function Column({
             task={task}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
+            onDelete={onDeleteTask}
           />
         ))}
-        
+
         {tasks.length === 0 && (
           <div className="text-center py-8 text-gray-400 text-sm">
             暂无任务
