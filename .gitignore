@@ -160,3 +160,4 @@ backend/node_modules/
 backend/dist/
 backend/data/*.sqlite
 backend/.env
+.vercel

@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Task, TaskStatus } from '../types';
-import { teamMembers } from '../data/mockData';
+import { Task, TaskStatus, TeamMember } from '../types';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -17,6 +16,33 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
   const [assignee, setAssignee] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/users', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTeamMembers(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchUsers();
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +151,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               <option value="">未分配</option>
               {teamMembers.map((member) => (
                 <option key={member.id} value={member.name}>
-                  {member.name}
+                  {member.name} ({member.role === 'leader' ? '组长' : member.role === 'admin' ? '管理员' : '组员'})
                 </option>
               ))}
             </select>

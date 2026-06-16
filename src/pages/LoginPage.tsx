@@ -1,16 +1,20 @@
 import { useState } from 'react';
-import { users } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, UserCircle } from 'lucide-react';
+import { LogIn, UserCircle, KeyRound } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [selectedUser, setSelectedUser] = useState(users[0]);
+  const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (!account) {
+      setError('请输入账号');
+      return;
+    }
+
     if (!password) {
       setError('请输入密码');
       return;
@@ -19,10 +23,10 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
-    const success = await login(selectedUser.email, password);
+    const success = await login(account, password);
 
     if (!success) {
-      setError('邮箱或密码错误');
+      setError('账号或密码错误');
     }
 
     setIsLoading(false);
@@ -46,38 +50,17 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">选择用户</label>
-            <select
-              value={selectedUser.id}
-              onChange={(e) => {
-                const user = users.find((u) => u.id === e.target.value);
-                if (user) {
-                  setSelectedUser(user);
-                  setError('');
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            >
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} - {user.role} ({user.email})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              密码 <span className="text-gray-400">(演示密码: 123456)</span>
+              账号
             </label>
             <input
-              type="password"
-              value={password}
+              type="text"
+              value={account}
               onChange={(e) => {
-                setPassword(e.target.value);
+                setAccount(e.target.value);
                 setError('');
               }}
-              placeholder="请输入密码"
+              placeholder="学号 / 手机号 / 邮箱"
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
@@ -85,6 +68,30 @@ export default function LoginPage() {
                 }
               }}
             />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              密码 <span className="text-gray-400">(演示密码: 123456)</span>
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="请输入密码"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleLogin();
+                  }
+                }}
+              />
+              <KeyRound size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            </div>
           </div>
 
           {error && (
@@ -112,9 +119,18 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <p className="text-center text-gray-400 text-sm mt-6">
-          这是一个演示系统，所有用户密码均为 <code className="bg-gray-100 px-1 rounded">123456</code>
-        </p>
+        <div className="bg-white/50 rounded-xl p-4 mt-4">
+          <p className="text-sm font-medium text-gray-700 mb-2">测试账号：</p>
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+            <div>• 张三(组长): 2024001</div>
+            <div>• 李四(组员): 2024002</div>
+            <div>• 王五(组员): 2024003</div>
+            <div>• 赵六(组长): 2024004</div>
+            <div>• 孙七(组员): 2024005</div>
+            <div>• 管理员: admin</div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">所有账号密码均为 123456</p>
+        </div>
       </div>
     </div>
   );

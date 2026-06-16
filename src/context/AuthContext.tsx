@@ -1,17 +1,17 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { User } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (account: string, password: string) => Promise<boolean>;
   logout: () => void;
-  switchUser: (email: string, password: string) => Promise<boolean>;
+  switchUser: (account: string, password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
+const API_URL = ''; // 部署到 Vercel 后使用相对路径
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -24,14 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = user !== null;
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (account: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ account, password }),
       });
 
       if (!response.ok) {
@@ -41,10 +41,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
       const userData: User = {
         id: String(data.user.id),
-        name: data.user.name,
+        studentId: data.user.studentId,
+        phone: data.user.phone,
+        name: data.user.username,
         email: data.user.email,
         avatar: data.user.avatar,
         role: data.user.role,
+        groupId: data.user.groupId,
+        groupName: data.user.groupName,
+        isLeader: data.user.isLeader,
       };
 
       setUser(userData);
@@ -62,9 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('token');
   }, []);
 
-  const switchUser = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const switchUser = useCallback(async (account: string, password: string): Promise<boolean> => {
     logout();
-    return login(email, password);
+    return login(account, password);
   }, [login, logout]);
 
   return (
