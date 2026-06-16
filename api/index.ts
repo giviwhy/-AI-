@@ -85,45 +85,18 @@ async function initDatabase(sql: NeonQueryFunction) {
   )`;
 
   // 检查并添加缺失的列（兼容旧数据库）
-  try {
-    // 检查 users 表是否有 group_id 列
-    const userColumns = await sql`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'group_id'
-    `;
-    if (userColumns.length === 0) {
-      await sql`ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)`;
+  const addColumnIfNotExists = async (table: string, column: string, definition: string) => {
+    try {
+      await sql.unsafe(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
+    } catch (e) {
+      // 列已存在或其他错误，忽略
     }
+  };
 
-    // 检查 users 表是否有 avatar 列
-    const avatarColumns = await sql`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'avatar'
-    `;
-    if (avatarColumns.length === 0) {
-      await sql`ALTER TABLE users ADD COLUMN avatar VARCHAR(10) DEFAULT ''`;
-    }
-
-    // 检查 users 表是否有 student_id 列
-    const studentIdColumns = await sql`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'student_id'
-    `;
-    if (studentIdColumns.length === 0) {
-      await sql`ALTER TABLE users ADD COLUMN student_id VARCHAR(20) UNIQUE`;
-    }
-
-    // 检查 users 表是否有 phone 列
-    const phoneColumns = await sql`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name = 'users' AND column_name = 'phone'
-    `;
-    if (phoneColumns.length === 0) {
-      await sql`ALTER TABLE users ADD COLUMN phone VARCHAR(20) UNIQUE`;
-    }
-  } catch (e) {
-    console.error("Error adding missing columns:", e);
-  }
+  await addColumnIfNotExists('users', 'group_id', 'INTEGER REFERENCES groups(id)');
+  await addColumnIfNotExists('users', 'avatar', 'VARCHAR(10) DEFAULT \'\'');
+  await addColumnIfNotExists('users', 'student_id', 'VARCHAR(20)');
+  await addColumnIfNotExists('users', 'phone', 'VARCHAR(20)');
 
   // 检查是否有初始数据
   const result = await sql`SELECT COUNT(*) as count FROM users`;
