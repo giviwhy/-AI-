@@ -9,10 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/postgres": "^0.10.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.263.0",
+    "neon-js": "^1.1.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
