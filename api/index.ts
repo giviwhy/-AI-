@@ -88,7 +88,7 @@ async function initDatabase(sql: NeonQueryFunction) {
   const result = await sql`SELECT COUNT(*) as count FROM users`;
   if (Number(result[0].count) === 0) {
     const hashedPassword = await bcrypt.hash("123456", 10);
-    
+
     // 创建小组
     await sql`INSERT INTO groups (name) VALUES
       (${'项目开发组'}),
@@ -150,15 +150,15 @@ export default async function handler(req: any, res: any) {
   const { pathname } = new URL(req.url || '/', `http://${req.headers.host}`);
 
   // ==================== 用户认证 ====================
-  
+
   // 登录接口（支持学号/手机号/邮箱）
   if (pathname === "/api/login" && req.method === "POST") {
     const { account, password } = req.body || {};
-    
+
     if (!account || !password) {
       return res.status(400).json({ message: "请提供账号和密码" });
     }
-    
+
     try {
       // 支持学号、手机号、邮箱登录
       const users = await sql`
@@ -167,7 +167,7 @@ export default async function handler(req: any, res: any) {
         LEFT JOIN groups g ON u.group_id = g.id
         WHERE u.student_id = ${account} OR u.phone = ${account} OR u.email = ${account}
       `;
-      
+
       if (users.length === 0) {
         return res.status(401).json({ message: "账号或密码错误" });
       }
@@ -203,7 +203,7 @@ export default async function handler(req: any, res: any) {
   }
 
   // ==================== 用户管理 ====================
-  
+
   // 获取用户列表
   if (pathname === "/api/users" && req.method === "GET") {
     try {
@@ -232,7 +232,7 @@ export default async function handler(req: any, res: any) {
   }
 
   // ==================== 小组管理 ====================
-  
+
   // 获取小组列表
   if (pathname === "/api/groups" && req.method === "GET") {
     try {
@@ -257,13 +257,192 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  // 创建小组（管理员专属）
+  if (pathname === "/api/groups" && req.method === "POST") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: "只有管理员可以创建小组" });
+    }
+
+    try {
+      const { name, leaderId } = req.body || {};
+
+      if (!name) {
+        return res.status(400).json({ message: "请提供小组名称" });
+      }
+
+      const result = await sql`
+        INSERT INTO groups (name, leader_id)
+        VALUES (${name}, ${leaderId || null})
+        RETURNING *
+      `;
+
+      return res.status(201).json({
+        id: result[0].id,
+        name: result[0].name,
+        leaderId: result[0].leader_id,
+        createdAt: result[0].created_at,
+      });
+    } catch (error: any) {
+      console.error("Create group error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 更新小组（管理员专属）
+  if (pathname.match(/^\/api\/groups\/\d+$/) && req.method === "PUT") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: "只有管理员可以更新小组" });
+    }
+
+    try {
+      const groupId = parseInt(pathname.split("/")[3]);
+      const { name, leaderId } = req.body || {};
+
+      const updates: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (name) {
+        updates.push(`name = $${paramIndex++}`);
+        params.push(name);
+      }
+      if (leaderId !== undefined) {
+        updates.push(`leader_id = $${paramIndex++}`);
+        params.push(leaderId);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ message: "没有要更新的字段" });
+      }
+
+      params.push(groupId);
+      const result = await sql.unsafe(`UPDATE groups SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`, params);
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "小组不存在" });
+      }
+
+      return res.json({
+        id: result[0].id,
+        name: result[0].name,
+        leaderId: result[0].leader_id,
+      });
+    } catch (error: any) {
+      console.error("Update group error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 删除小组（管理员专属）
+  if (pathname.match(/^\/api\/groups\/\d+$/) && req.method === "DELETE") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: "只有管理员可以删除小组" });
+    }
+
+    try {
+      const groupId = parseInt(pathname.split("/")[3]);
+
+      // 先将小组内的用户移出小组
+      await sql`UPDATE users SET group_id = NULL WHERE group_id = ${groupId}`;
+
+      // 删除小组的任务
+      await sql`DELETE FROM tasks WHERE group_id = ${groupId}`;
+
+      // 删除小组
+      await sql`DELETE FROM groups WHERE id = ${groupId}`;
+
+      return res.json({ message: "小组已删除" });
+    } catch (error: any) {
+      console.error("Delete group error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 添加组员到小组（管理员专属）
+  if (pathname.match(/^\/api\/groups\/\d+\/members$/) && req.method === "POST") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: "只有管理员可以添加组员" });
+    }
+
+    try {
+      const groupId = parseInt(pathname.split("/")[3]);
+      const { userId } = req.body || {};
+
+      if (!userId) {
+        return res.status(400).json({ message: "请提供用户ID" });
+      }
+
+      await sql`UPDATE users SET group_id = ${groupId} WHERE id = ${userId}`;
+
+      return res.json({ message: "组员已添加" });
+    } catch (error: any) {
+      console.error("Add member error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 从小组移除组员（管理员专属）
+  if (pathname.match(/^\/api\/groups\/\d+\/members\/\d+$/) && req.method === "DELETE") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: "只有管理员可以移除组员" });
+    }
+
+    try {
+      const groupId = parseInt(pathname.split("/")[3]);
+      const userId = parseInt(pathname.split("/")[5]);
+
+      // 不能移除组长
+      const group = await sql`SELECT leader_id FROM groups WHERE id = ${groupId}`;
+      if (group.length > 0 && group[0].leader_id === userId) {
+        return res.status(400).json({ message: "不能移除组长，请先更换组长" });
+      }
+
+      await sql`UPDATE users SET group_id = NULL WHERE id = ${userId}`;
+
+      return res.json({ message: "组员已移除" });
+    } catch (error: any) {
+      console.error("Remove member error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
   // ==================== 任务管理 ====================
-  
+
   // 验证 token 的辅助函数
   async function verifyToken(authHeader: string | undefined) {
     const token = authHeader && authHeader.split(" ")[1];
     if (!token) return null;
-    
+
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
       return decoded;
@@ -275,7 +454,7 @@ export default async function handler(req: any, res: any) {
   // 获取任务列表（支持筛选）
   if (pathname === "/api/tasks" && req.method === "GET") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
@@ -300,7 +479,7 @@ export default async function handler(req: any, res: any) {
         LEFT JOIN groups g ON t.group_id = g.id
         WHERE 1=1
       `;
-      
+
       const conditions: string[] = [];
       const params: any[] = [];
       let paramIndex = 1;
@@ -332,7 +511,7 @@ export default async function handler(req: any, res: any) {
       query += ` ORDER BY t.${sortField} ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}`;
 
       const tasks = await sql.unsafe(query, params);
-      
+
       return res.json(tasks.map((task: any) => ({
         id: task.id,
         title: task.title,
@@ -360,7 +539,7 @@ export default async function handler(req: any, res: any) {
   // 创建任务（组长专属）
   if (pathname === "/api/tasks" && req.method === "POST") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
@@ -372,7 +551,7 @@ export default async function handler(req: any, res: any) {
 
     try {
       const { title, description, dueDate, priority, assigneeId, groupId, tags } = req.body || {};
-      
+
       const result = await sql`
         INSERT INTO tasks (title, description, due_date, priority, status, creator_id, assignee_id, group_id, tags, created_at, updated_at)
         VALUES (${title || ''}, ${description || ''}, ${dueDate || null}, ${priority || 'medium'}, ${'todo'}, ${decoded.userId}, ${assigneeId || null}, ${groupId || null}, ${tags || []}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -410,7 +589,7 @@ export default async function handler(req: any, res: any) {
   // 更新任务状态
   if (pathname.match(/^\/api\/tasks\/\d+\/status$/) && req.method === "PUT") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
@@ -418,7 +597,7 @@ export default async function handler(req: any, res: any) {
     try {
       const taskId = parseInt(pathname.split("/")[3]);
       const { status } = req.body || {};
-      
+
       // 验证状态流转规则
       const validStatuses = ['todo', 'in-progress', 'review', 'done', 'cancelled', 'needs-revision', 'overdue'];
       if (!validStatuses.includes(status)) {
@@ -432,7 +611,7 @@ export default async function handler(req: any, res: any) {
       }
 
       const task = currentTask[0];
-      
+
       // 组员只能更新自己负责的任务
       if (decoded.role === 'member' && task.assignee_id !== decoded.userId) {
         return res.status(403).json({ message: "只能更新自己负责的任务" });
@@ -474,7 +653,7 @@ export default async function handler(req: any, res: any) {
   // 分配/转移任务（组长专属）
   if (pathname.match(/^\/api\/tasks\/\d+\/assign$/) && req.method === "PUT") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
@@ -486,7 +665,7 @@ export default async function handler(req: any, res: any) {
     try {
       const taskId = parseInt(pathname.split("/")[3]);
       const { assigneeId } = req.body || {};
-      
+
       const result = await sql`
         UPDATE tasks 
         SET assignee_id = ${assigneeId}, updated_at = CURRENT_TIMESTAMP
@@ -519,14 +698,14 @@ export default async function handler(req: any, res: any) {
   // 删除任务
   if (pathname.match(/^\/api\/tasks\/\d+$/) && req.method === "DELETE") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
 
     try {
       const taskId = parseInt(pathname.split("/")[3]);
-      
+
       // 只有创建者、组长、管理员可以删除任务
       const task = await sql`SELECT * FROM tasks WHERE id = ${taskId}`;
       if (task.length === 0) {
@@ -538,7 +717,7 @@ export default async function handler(req: any, res: any) {
       }
 
       await sql`DELETE FROM tasks WHERE id = ${taskId}`;
-      
+
       return res.json({ message: "任务已删除" });
     } catch (error: any) {
       console.error("Delete task error:", error);
@@ -546,19 +725,139 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ==================== 评论管理 ====================
-  
-  // 获取任务评论
-  if (pathname.match(/^\/api\/tasks\/\d+\/comments$/) && req.method === "GET") {
+  // ==================== 附件管理 ====================
+
+  // 获取任务附件
+  if (pathname.match(/^\/api\/tasks\/\d+\/attachments$/) && req.method === "GET") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
 
     try {
       const taskId = parseInt(pathname.split("/")[3]);
-      
+
+      const attachments = await sql`
+        SELECT a.*, u.username as uploader_name
+        FROM attachments a
+        JOIN users u ON a.uploader_id = u.id
+        WHERE a.task_id = ${taskId}
+        ORDER BY a.created_at DESC
+      `;
+
+      return res.json(attachments.map((a: any) => ({
+        id: a.id,
+        taskId: a.task_id,
+        fileName: a.file_name,
+        filePath: a.file_path,
+        fileType: a.file_type,
+        uploaderId: a.uploader_id,
+        uploaderName: a.uploader_name,
+        createdAt: a.created_at,
+      })));
+    } catch (error: any) {
+      console.error("Get attachments error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 添加任务附件（基于URL）
+  if (pathname.match(/^\/api\/tasks\/\d+\/attachments$/) && req.method === "POST") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    try {
+      const taskId = parseInt(pathname.split("/")[3]);
+      const { fileName, filePath, fileType } = req.body || {};
+
+      if (!fileName || !filePath) {
+        return res.status(400).json({ message: "请提供文件名和文件路径" });
+      }
+
+      const result = await sql`
+        INSERT INTO attachments (task_id, file_name, file_path, file_type, uploader_id)
+        VALUES (${taskId}, ${fileName}, ${filePath}, ${fileType || 'link'}, ${decoded.userId})
+        RETURNING *
+      `;
+
+      // 发送通知
+      const task = await sql`SELECT * FROM tasks WHERE id = ${taskId}`;
+      if (task.length > 0) {
+        const notifyUsers = [task[0].creator_id, task[0].assignee_id].filter(id => id && id !== decoded.userId);
+        for (const userId of notifyUsers) {
+          await sql`
+            INSERT INTO notifications (user_id, type, title, content, task_id)
+            VALUES (${userId}, ${'file_uploaded'}, ${'新附件上传'}, ${'任务"' + task[0].title + '"有新附件：' + fileName}, ${taskId})
+          `;
+        }
+      }
+
+      return res.status(201).json({
+        id: result[0].id,
+        taskId: result[0].task_id,
+        fileName: result[0].file_name,
+        filePath: result[0].file_path,
+        fileType: result[0].file_type,
+        uploaderId: result[0].uploader_id,
+        createdAt: result[0].created_at,
+      });
+    } catch (error: any) {
+      console.error("Add attachment error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 删除任务附件
+  if (pathname.match(/^\/api\/attachments\/\d+$/) && req.method === "DELETE") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    try {
+      const attachmentId = parseInt(pathname.split("/")[3]);
+
+      // 检查权限（上传者、组长、管理员可以删除）
+      const attachment = await sql`SELECT * FROM attachments WHERE id = ${attachmentId}`;
+      if (attachment.length === 0) {
+        return res.status(404).json({ message: "附件不存在" });
+      }
+
+      const task = await sql`SELECT * FROM tasks WHERE id = ${attachment[0].task_id}`;
+
+      if (decoded.role !== 'admin' && decoded.role !== 'leader' &&
+        attachment[0].uploader_id !== decoded.userId &&
+        task[0]?.creator_id !== decoded.userId) {
+        return res.status(403).json({ message: "无权删除此附件" });
+      }
+
+      await sql`DELETE FROM attachments WHERE id = ${attachmentId}`;
+
+      return res.json({ message: "附件已删除" });
+    } catch (error: any) {
+      console.error("Delete attachment error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // ==================== 评论管理 ====================
+
+  // 获取任务评论
+  if (pathname.match(/^\/api\/tasks\/\d+\/comments$/) && req.method === "GET") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    try {
+      const taskId = parseInt(pathname.split("/")[3]);
+
       const comments = await sql`
         SELECT c.*, u.username, u.avatar
         FROM comments c
@@ -566,7 +865,7 @@ export default async function handler(req: any, res: any) {
         WHERE c.task_id = ${taskId}
         ORDER BY c.created_at DESC
       `;
-      
+
       return res.json(comments.map((c: any) => ({
         id: c.id,
         taskId: c.task_id,
@@ -585,7 +884,7 @@ export default async function handler(req: any, res: any) {
   // 添加评论
   if (pathname.match(/^\/api\/tasks\/\d+\/comments$/) && req.method === "POST") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
@@ -593,7 +892,7 @@ export default async function handler(req: any, res: any) {
     try {
       const taskId = parseInt(pathname.split("/")[3]);
       const { content } = req.body || {};
-      
+
       if (!content) {
         return res.status(400).json({ message: "评论内容不能为空" });
       }
@@ -630,11 +929,11 @@ export default async function handler(req: any, res: any) {
   }
 
   // ==================== 通知管理 ====================
-  
+
   // 获取用户通知
   if (pathname === "/api/notifications" && req.method === "GET") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
@@ -646,7 +945,7 @@ export default async function handler(req: any, res: any) {
         ORDER BY created_at DESC
         LIMIT 50
       `;
-      
+
       return res.json(notifications.map((n: any) => ({
         id: n.id,
         type: n.type,
@@ -665,20 +964,20 @@ export default async function handler(req: any, res: any) {
   // 标记通知已读
   if (pathname.match(/^\/api\/notifications\/\d+\/read$/) && req.method === "PUT") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }
 
     try {
       const notificationId = parseInt(pathname.split("/")[3]);
-      
+
       await sql`
         UPDATE notifications
         SET is_read = true
         WHERE id = ${notificationId} AND user_id = ${decoded.userId}
       `;
-      
+
       return res.json({ message: "已标记为已读" });
     } catch (error: any) {
       console.error("Mark notification read error:", error);
@@ -687,11 +986,11 @@ export default async function handler(req: any, res: any) {
   }
 
   // ==================== 统计分析 ====================
-  
+
   // 获取统计数据
   if (pathname === "/api/statistics" && req.method === "GET") {
     const decoded = await verifyToken(req.headers["authorization"]);
-    
+
     if (!decoded) {
       return res.status(401).json({ message: "未提供认证令牌" });
     }

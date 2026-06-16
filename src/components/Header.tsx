@@ -1,9 +1,11 @@
-import { LayoutDashboard, Bell, Search, ChevronDown, LogOut, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Bell, Search, ChevronDown, LogOut, RefreshCw, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useRef, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +37,30 @@ export default function Header() {
               <p className="text-xs text-gray-500">小组协作管理</p>
             </div>
           </div>
+
+          <nav className="flex items-center gap-2">
+            <Link
+              to="/"
+              className={`px-4 py-2 rounded-lg transition-colors ${location.pathname === '/'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
+            >
+              任务看板
+            </Link>
+            {user?.role === 'admin' && (
+              <Link
+                to="/groups"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${location.pathname === '/groups'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+              >
+                <Users size={18} />
+                小组管理
+              </Link>
+            )}
+          </nav>
 
           <div className="flex items-center gap-4">
             <div className="relative">

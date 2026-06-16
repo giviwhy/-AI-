@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Task, TaskStatus } from './types';
 import { columns } from './data/mockData';
 import Header from './components/Header';
 import Column from './components/Column';
 import AddTaskModal from './components/AddTaskModal';
+import GroupManagement from './pages/GroupManagement';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 
@@ -164,35 +166,42 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columns.map((column) => (
-            <Column
-              key={column.id}
-              column={column}
-              tasks={getTasksByStatus(column.id)}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onAddTask={handleOpenAddModal}
-              onDeleteTask={handleDeleteTask}
-              isDropTarget={dropTargetColumn === column.id}
-            />
-          ))}
-        </div>
-      </main>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Routes>
+            <Route path="/" element={
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {columns.map((column) => (
+                  <Column
+                    key={column.id}
+                    column={column}
+                    tasks={getTasksByStatus(column.id)}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onAddTask={handleOpenAddModal}
+                    onDeleteTask={handleDeleteTask}
+                    isDropTarget={dropTargetColumn === column.id}
+                  />
+                ))}
+              </div>
+            } />
+            <Route path="/groups" element={<GroupManagement />} />
+          </Routes>
+        </main>
 
-      <AddTaskModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAdd={handleAddTask}
-        initialStatus={newTaskStatus}
-      />
-    </div>
+        <AddTaskModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAdd={handleAddTask}
+          initialStatus={newTaskStatus}
+        />
+      </div>
+    </BrowserRouter>
   );
 }
 
