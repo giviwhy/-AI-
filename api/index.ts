@@ -86,9 +86,9 @@ async function initDatabase(sql: NeonQueryFunction) {
 
   // 检查是否有初始数据
   const result = await sql`SELECT COUNT(*) as count FROM users`;
-  if (Number(result[0].count) === 0) {
-    const hashedPassword = await bcrypt.hash("123456", 10);
+  const hashedPassword = await bcrypt.hash("123456", 10);
 
+  if (Number(result[0].count) === 0) {
     // 创建小组
     await sql`INSERT INTO groups (name) VALUES
       (${'项目开发组'}),
@@ -119,6 +119,13 @@ async function initDatabase(sql: NeonQueryFunction) {
       (${'编写单元测试'}, ${'为核心模块编写测试用例'}, ${'2024-06-15'}, ${'medium'}, ${'done'}, ${1}, ${3}, ${1}, ${'{测试,后端}'}),
       (${'部署测试环境'}, ${'配置并部署测试环境到Vercel'}, ${'2024-06-12'}, ${'high'}, ${'done'}, ${1}, ${2}, ${1}, ${'{运维,部署}'})
     `;
+  } else {
+    // 确保 admin 用户存在
+    const adminCheck = await sql`SELECT id FROM users WHERE student_id = ${'admin'} OR email = ${'admin@example.com'}`;
+    if (adminCheck.length === 0) {
+      await sql`INSERT INTO users (student_id, phone, email, username, password, role, group_id, avatar) VALUES
+        (${'admin'}, ${null}, ${'admin@example.com'}, ${'管理员'}, ${hashedPassword}, ${'admin'}, ${null}, ${'AD'})`;
+    }
   }
 }
 
