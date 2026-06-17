@@ -112,7 +112,6 @@ async function initDatabase(sql: NeonQueryFunction) {
       (${'2024004'}, ${'13800000004'}, ${'zhaoliu@example.com'}, ${'赵六'}, ${hashedPassword}, ${'leader'}, ${2}, ${'ZL'}),
       (${'2024005'}, ${'13800000005'}, ${'sunqi@example.com'}, ${'孙七'}, ${hashedPassword}, ${'member'}, ${2}, ${'SQ'}),
       (${'admin'}, ${null}, ${'admin@example.com'}, ${'管理员'}, ${hashedPassword}, ${'admin'}, ${null}, ${'AD'}),
-      // 未分配小组的用户（用于测试添加组员功能）
       (${'2024006'}, ${'13800000006'}, ${'zhouba@example.com'}, ${'周八'}, ${hashedPassword}, ${'member'}, ${null}, ${'ZB'}),
       (${'2024007'}, ${'13800000007'}, ${'wujiu@example.com'}, ${'吴九'}, ${hashedPassword}, ${'member'}, ${null}, ${'WJ'}),
       (${'2024008'}, ${'13800000008'}, ${'zhengshi@example.com'}, ${'郑十'}, ${hashedPassword}, ${'member'}, ${null}, ${'ZS'})
