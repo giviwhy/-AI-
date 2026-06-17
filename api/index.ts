@@ -111,7 +111,11 @@ async function initDatabase(sql: NeonQueryFunction) {
       (${'2024003'}, ${'13800000003'}, ${'wangwu@example.com'}, ${'王五'}, ${hashedPassword}, ${'member'}, ${1}, ${'WW'}),
       (${'2024004'}, ${'13800000004'}, ${'zhaoliu@example.com'}, ${'赵六'}, ${hashedPassword}, ${'leader'}, ${2}, ${'ZL'}),
       (${'2024005'}, ${'13800000005'}, ${'sunqi@example.com'}, ${'孙七'}, ${hashedPassword}, ${'member'}, ${2}, ${'SQ'}),
-      (${'admin'}, ${null}, ${'admin@example.com'}, ${'管理员'}, ${hashedPassword}, ${'admin'}, ${null}, ${'AD'})
+      (${'admin'}, ${null}, ${'admin@example.com'}, ${'管理员'}, ${hashedPassword}, ${'admin'}, ${null}, ${'AD'}),
+      // 未分配小组的用户（用于测试添加组员功能）
+      (${'2024006'}, ${'13800000006'}, ${'zhouba@example.com'}, ${'周八'}, ${hashedPassword}, ${'member'}, ${null}, ${'ZB'}),
+      (${'2024007'}, ${'13800000007'}, ${'wujiu@example.com'}, ${'吴九'}, ${hashedPassword}, ${'member'}, ${null}, ${'WJ'}),
+      (${'2024008'}, ${'13800000008'}, ${'zhengshi@example.com'}, ${'郑十'}, ${hashedPassword}, ${'member'}, ${null}, ${'ZS'})
     `;
 
     // 更新小组组长
@@ -996,6 +1000,112 @@ export default async function handler(req: any, res: any) {
       return res.json({ message: "已标记为已读" });
     } catch (error: any) {
       console.error("Mark notification read error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 组长发布通知（向组员发送通知）
+  if (pathname === "/api/notifications/group" && req.method === "POST") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    if (decoded.role !== 'leader' && decoded.role !== 'admin') {
+      return res.status(403).json({ message: "只有组长可以发布通知" });
+    }
+
+    try {
+      const { title, content } = req.body || {};
+
+      if (!title || !content) {
+        return res.status(400).json({ message: "请提供通知标题和内容" });
+      }
+
+      // 获取组长所在小组的成员
+      let memberIds: number[] = [];
+
+      if (decoded.role === 'leader') {
+        const user = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+        if (user.length === 0 || !user[0].group_id) {
+          return res.status(400).json({ message: "组长未分配到小组" });
+        }
+
+        const members = await sql`SELECT id FROM users WHERE group_id = ${user[0].group_id}`;
+        memberIds = members.map((m: any) => m.id);
+      } else {
+        // 管理员可以向所有成员发送通知
+        const members = await sql`SELECT id FROM users WHERE role = 'member'`;
+        memberIds = members.map((m: any) => m.id);
+      }
+
+      // 发送通知给所有组员
+      for (const userId of memberIds) {
+        await sql`
+          INSERT INTO notifications (user_id, type, title, content)
+          VALUES (${userId}, ${'group_notification'}, ${title}, ${content})
+        `;
+      }
+
+      return res.json({ message: "通知已发送", count: memberIds.length });
+    } catch (error: any) {
+      console.error("Send group notification error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // ==================== 任务详情 ====================
+
+  // 获取任务详情
+  if (pathname.match(/^\/api\/tasks\/\d+$/) && req.method === "GET") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    try {
+      const taskId = parseInt(pathname.split("/")[3]);
+
+      const task = await sql`
+        SELECT t.*, 
+               u1.username as creator_name, u1.avatar as creator_avatar,
+               u2.username as assignee_name, u2.avatar as assignee_avatar,
+               g.name as group_name
+        FROM tasks t
+        LEFT JOIN users u1 ON t.creator_id = u1.id
+        LEFT JOIN users u2 ON t.assignee_id = u2.id
+        LEFT JOIN groups g ON t.group_id = g.id
+        WHERE t.id = ${taskId}
+      `;
+
+      if (task.length === 0) {
+        return res.status(404).json({ message: "任务不存在" });
+      }
+
+      const taskData = task[0];
+      return res.json({
+        id: taskData.id,
+        title: taskData.title,
+        description: taskData.description,
+        dueDate: taskData.due_date,
+        priority: taskData.priority,
+        status: taskData.status,
+        creatorId: taskData.creator_id,
+        creatorName: taskData.creator_name,
+        creatorAvatar: taskData.creator_avatar,
+        assigneeId: taskData.assignee_id,
+        assigneeName: taskData.assignee_name,
+        assigneeAvatar: taskData.assignee_avatar,
+        groupId: taskData.group_id,
+        groupName: taskData.group_name,
+        tags: taskData.tags,
+        createdAt: taskData.created_at,
+        updatedAt: taskData.updated_at,
+      });
+    } catch (error: any) {
+      console.error("Get task detail error:", error);
       return res.status(500).json({ message: "服务器错误: " + error.message });
     }
   }
