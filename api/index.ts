@@ -354,8 +354,15 @@ export default async function handler(req: any, res: any) {
       const query = `UPDATE groups SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
       const result: any = await sql.unsafe(query, params);
 
-      const rows = result?.rows || result;
-      if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      // 确保 result 存在且是预期的格式
+      if (!result) {
+        return res.status(500).json({ message: "数据库操作失败" });
+      }
+
+      // 处理不同的返回格式
+      const rows = Array.isArray(result) ? result : (result?.rows || []);
+
+      if (!Array.isArray(rows) || rows.length === 0) {
         return res.status(404).json({ message: "小组不存在" });
       }
 
