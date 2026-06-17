@@ -350,20 +350,21 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ message: "没有要更新的字段" });
       }
 
+      // 先检查小组是否存在
+      const existsResult = await sql`SELECT id FROM groups WHERE id = ${groupId}`;
+      if (!existsResult || (Array.isArray(existsResult) && existsResult.length === 0)) {
+        return res.status(404).json({ message: "小组不存在" });
+      }
+
       params.push(groupId);
       const query = `UPDATE groups SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
       const result: any = await sql.unsafe(query, params);
-
-      // 确保 result 存在且是预期的格式
-      if (!result) {
-        return res.status(500).json({ message: "数据库操作失败" });
-      }
 
       // 处理不同的返回格式
       const rows = Array.isArray(result) ? result : (result?.rows || []);
 
       if (!Array.isArray(rows) || rows.length === 0) {
-        return res.status(404).json({ message: "小组不存在" });
+        return res.status(500).json({ message: "更新小组失败" });
       }
 
       // 如果指定了新组长，更新该用户的角色为 leader
