@@ -30,6 +30,7 @@ export interface TeamMember {
   id: number;
   studentId?: string;
   name: string;
+  username?: string;
   avatar: string;
   role: string;
   groupId?: number;
