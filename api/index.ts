@@ -548,6 +548,10 @@ export default async function handler(req: any, res: any) {
       const sortBy = url.searchParams.get('sortBy') || 'created_at';
       const sortOrder = url.searchParams.get('sortOrder') || 'DESC';
 
+      // 获取当前用户的组信息
+      const currentUser = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+      const userGroupId = currentUser[0]?.group_id;
+
       let query = `
         SELECT t.*, 
                u1.username as creator_name, u1.avatar as creator_avatar,
@@ -563,6 +567,18 @@ export default async function handler(req: any, res: any) {
       const conditions: string[] = [];
       const params: any[] = [];
       let paramIndex = 1;
+
+      // 权限过滤：管理员可以看到所有任务，组长和组员只能看到自己小组的任务
+      if (decoded.role !== 'admin') {
+        if (userGroupId) {
+          conditions.push(`t.group_id = $${paramIndex++}`);
+          params.push(userGroupId);
+        } else {
+          // 没有小组的用户看不到任何任务
+          conditions.push(`t.group_id = $${paramIndex++}`);
+          params.push(-1);
+        }
+      }
 
       if (status) {
         conditions.push(`t.status = $${paramIndex++}`);
@@ -1104,13 +1120,19 @@ export default async function handler(req: any, res: any) {
         memberIds = members.map((m: any) => m.id);
       }
 
-      // 发送通知给所有组员
+      // 发送通知给所有组员（包括组长自己）
       for (const userId of memberIds) {
         await sql`
           INSERT INTO notifications (user_id, type, title, content)
           VALUES (${userId}, ${'group_notification'}, ${title}, ${content})
         `;
       }
+
+      // 组长自己也要收到通知
+      await sql`
+        INSERT INTO notifications (user_id, type, title, content)
+        VALUES (${decoded.userId}, ${'group_notification'}, ${title}, ${content})
+      `;
 
       return res.json({ message: "通知已发送", count: memberIds.length });
     } catch (error: any) {

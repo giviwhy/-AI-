@@ -11,6 +11,7 @@ interface ColumnProps {
   onDrop: (e: React.DragEvent, status: string) => void;
   onAddTask: (status: string) => void;
   onDeleteTask: (taskId: string) => void;
+  onViewTask: (task: Task) => void;
   isDropTarget: boolean;
   canAddTask: boolean;
 }
@@ -24,6 +25,7 @@ export default function Column({
   onDrop,
   onAddTask,
   onDeleteTask,
+  onViewTask,
   isDropTarget,
   canAddTask,
 }: ColumnProps) {
@@ -62,6 +64,7 @@ export default function Column({
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onDelete={onDeleteTask}
+            onClick={() => onViewTask(task)}
           />
         ))}
 

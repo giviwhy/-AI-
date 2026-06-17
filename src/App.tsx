@@ -5,6 +5,7 @@ import { columns } from './data/mockData';
 import Header from './components/Header';
 import Column from './components/Column';
 import AddTaskModal from './components/AddTaskModal';
+import TaskDetailModal from './components/TaskDetailModal';
 import GroupManagement from './pages/GroupManagement';
 import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -19,6 +20,8 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>('todo');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -40,7 +43,7 @@ function App() {
           setTasks(data.map((task: any) => ({
             ...task,
             id: String(task.id),
-            assignee: task.assignee || '未分配',
+            assignee: task.assigneeName || task.assignee || '未分配',
           })));
         }
       } catch (error) {
@@ -144,6 +147,11 @@ function App() {
     }
   }, []);
 
+  const handleViewTask = useCallback((task: Task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  }, []);
+
   const handleOpenAddModal = (status: string) => {
     setNewTaskStatus(status as TaskStatus);
     setIsModalOpen(true);
@@ -185,6 +193,7 @@ function App() {
                     onDrop={handleDrop}
                     onAddTask={handleOpenAddModal}
                     onDeleteTask={handleDeleteTask}
+                    onViewTask={handleViewTask}
                     isDropTarget={dropTargetColumn === column.id}
                     canAddTask={user?.role === 'leader' || user?.role === 'admin'}
                   />
@@ -201,6 +210,16 @@ function App() {
           onAdd={handleAddTask}
           initialStatus={newTaskStatus}
         />
+
+        {selectedTask && (
+          <TaskDetailModal
+            task={selectedTask}
+            onClose={() => {
+              setIsDetailModalOpen(false);
+              setSelectedTask(null);
+            }}
+          />
+        )}
       </div>
     </BrowserRouter>
   );

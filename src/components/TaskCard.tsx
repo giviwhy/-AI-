@@ -6,6 +6,7 @@ interface TaskCardProps {
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: () => void;
   onDelete: (taskId: string) => void;
+  onClick?: () => void;
 }
 
 const priorityStyles = {
@@ -20,12 +21,13 @@ const priorityLabels = {
   low: '低',
 };
 
-export default function TaskCard({ task, onDragStart, onDragEnd, onDelete }: TaskCardProps) {
+export default function TaskCard({ task, onDragStart, onDragEnd, onDelete, onClick }: TaskCardProps) {
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={onDragEnd}
+      onClick={onClick}
       className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group"
     >
       <div className="flex items-start justify-between mb-3">
