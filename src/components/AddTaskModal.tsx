@@ -150,8 +150,8 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
             >
               <option value="">未分配</option>
               {teamMembers.map((member) => (
-                <option key={member.id} value={member.name}>
-                  {member.name} ({member.role === 'leader' ? '组长' : member.role === 'admin' ? '管理员' : '组员'})
+                <option key={member.id} value={member.username || member.name}>
+                  {member.username || member.name} ({member.role === 'leader' ? '组长' : member.role === 'admin' ? '管理员' : '组员'})
                 </option>
               ))}
             </select>

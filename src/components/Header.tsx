@@ -1,12 +1,14 @@
-import { LayoutDashboard, Bell, Search, ChevronDown, LogOut, RefreshCw, Users } from 'lucide-react';
+import { LayoutDashboard, Bell, Search, ChevronDown, LogOut, RefreshCw, Users, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import SendNotificationModal from './SendNotificationModal';
 
 export default function Header() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,6 +61,15 @@ export default function Header() {
                 <Users size={18} />
                 小组管理
               </Link>
+            )}
+            {(user?.role === 'leader' || user?.role === 'admin') && (
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                <Send size={18} />
+                发布通知
+              </button>
             )}
           </nav>
 
@@ -129,6 +140,13 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {showNotificationModal && (
+        <SendNotificationModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+        />
+      )}
     </header>
   );
 }
