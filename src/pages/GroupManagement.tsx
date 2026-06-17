@@ -339,9 +339,17 @@ export default function GroupManagement() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="">不指定组长</option>
-                  {users.map((u) => (
+                  {users.filter(u => {
+                    // 创建小组时：只能选择未分配小组的用户
+                    if (!selectedGroup) {
+                      return !u.groupId && u.role !== 'admin';
+                    }
+                    // 编辑小组时：可以选择未分配小组的用户或当前小组的成员
+                    return !u.groupId || u.groupId === selectedGroup.id;
+                  }).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.username} ({u.role === 'leader' ? '组长' : u.role === 'member' ? '组员' : u.role})
+                      {u.groupId && selectedGroup?.id === u.groupId && ' · 当前组成员'}
                     </option>
                   ))}
                 </select>
@@ -394,9 +402,17 @@ export default function GroupManagement() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="">不指定组长</option>
-                  {users.map((u) => (
+                  {users.filter(u => {
+                    // 创建小组时：只能选择未分配小组的用户
+                    if (!selectedGroup) {
+                      return !u.groupId && u.role !== 'admin';
+                    }
+                    // 编辑小组时：可以选择未分配小组的用户或当前小组的成员
+                    return !u.groupId || u.groupId === selectedGroup.id;
+                  }).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.username} ({u.role === 'leader' ? '组长' : u.role === 'member' ? '组员' : u.role})
+                      {u.groupId && selectedGroup?.id === u.groupId && ' · 当前组成员'}
                     </option>
                   ))}
                 </select>
