@@ -12,7 +12,7 @@ import LoginPage from './pages/LoginPage';
 const API_URL = ''; // 部署到 Vercel 后使用相对路径
 
 function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTargetColumn, setDropTargetColumn] = useState<string | null>(null);
@@ -186,6 +186,7 @@ function App() {
                     onAddTask={handleOpenAddModal}
                     onDeleteTask={handleDeleteTask}
                     isDropTarget={dropTargetColumn === column.id}
+                    canAddTask={user?.role === 'leader' || user?.role === 'admin'}
                   />
                 ))}
               </div>

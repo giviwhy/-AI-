@@ -12,6 +12,7 @@ interface ColumnProps {
   onAddTask: (status: string) => void;
   onDeleteTask: (taskId: string) => void;
   isDropTarget: boolean;
+  canAddTask: boolean;
 }
 
 export default function Column({
@@ -24,6 +25,7 @@ export default function Column({
   onAddTask,
   onDeleteTask,
   isDropTarget,
+  canAddTask,
 }: ColumnProps) {
   return (
     <div
@@ -42,12 +44,14 @@ export default function Column({
             {tasks.length}
           </span>
         </div>
-        <button
-          onClick={() => onAddTask(column.id)}
-          className="p-1 rounded hover:bg-white/50 transition-colors"
-        >
-          <Plus size={18} className="text-gray-500" />
-        </button>
+        {canAddTask && (
+          <button
+            onClick={() => onAddTask(column.id)}
+            className="p-1 rounded hover:bg-white/50 transition-colors"
+          >
+            <Plus size={18} className="text-gray-500" />
+          </button>
+        )}
       </div>
 
       <div className="space-y-3">

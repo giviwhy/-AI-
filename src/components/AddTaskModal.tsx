@@ -21,7 +21,11 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
   useEffect(() => {
     const fetchUsers = async () => {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      const userData = localStorage.getItem('currentUser');
+      if (!token || !userData) return;
+
+      const currentUser = JSON.parse(userData);
+      const currentGroupId = currentUser.groupId;
 
       try {
         const response = await fetch('/api/users', {
@@ -32,7 +36,11 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
 
         if (response.ok) {
           const data = await response.json();
-          setTeamMembers(data);
+          // 只显示当前组的成员，不包括管理员
+          const filteredMembers = data.filter((u: any) =>
+            u.groupId === currentGroupId && u.role !== 'admin'
+          );
+          setTeamMembers(filteredMembers);
         }
       } catch (error) {
         console.error('Failed to fetch users:', error);

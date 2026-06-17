@@ -300,6 +300,11 @@ export default async function handler(req: any, res: any) {
         RETURNING *
       `;
 
+      // 如果指定了组长，更新该用户的角色为 leader
+      if (leaderId) {
+        await sql`UPDATE users SET role = 'leader' WHERE id = ${leaderId}`;
+      }
+
       return res.status(201).json({
         id: result[0].id,
         name: result[0].name,
@@ -352,6 +357,11 @@ export default async function handler(req: any, res: any) {
       const rows = result?.rows || result;
       if (!rows || !Array.isArray(rows) || rows.length === 0) {
         return res.status(404).json({ message: "小组不存在" });
+      }
+
+      // 如果指定了新组长，更新该用户的角色为 leader
+      if (leaderId !== undefined) {
+        await sql`UPDATE users SET role = 'leader' WHERE id = ${leaderId}`;
       }
 
       return res.json({
