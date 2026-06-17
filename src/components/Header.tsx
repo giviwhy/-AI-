@@ -3,12 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import SendNotificationModal from './SendNotificationModal';
+import NotificationList from './NotificationList';
 
 export default function Header() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showNotificationList, setShowNotificationList] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,7 +85,10 @@ export default function Header() {
               />
             </div>
 
-            <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <button
+              onClick={() => setShowNotificationList(true)}
+              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+            >
               <Bell size={20} className="text-gray-500" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
@@ -145,6 +150,12 @@ export default function Header() {
         <SendNotificationModal
           isOpen={showNotificationModal}
           onClose={() => setShowNotificationModal(false)}
+        />
+      )}
+      {showNotificationList && (
+        <NotificationList
+          isOpen={showNotificationList}
+          onClose={() => setShowNotificationList(false)}
         />
       )}
     </header>
