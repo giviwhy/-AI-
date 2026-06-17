@@ -97,6 +97,9 @@ async function initDatabase(sql: NeonQueryFunction) {
   await addColumnIfNotExists('users', 'avatar', 'VARCHAR(10) DEFAULT \'\'');
   await addColumnIfNotExists('users', 'student_id', 'VARCHAR(20)');
   await addColumnIfNotExists('users', 'phone', 'VARCHAR(20)');
+  await addColumnIfNotExists('users', 'username', 'VARCHAR(100) NOT NULL');
+  await addColumnIfNotExists('users', 'password', 'VARCHAR(255) NOT NULL');
+  await addColumnIfNotExists('users', 'role', "VARCHAR(20) DEFAULT 'member'");
 
   // 检查是否有初始数据
   const result = await sql`SELECT COUNT(*) as count FROM users`;
