@@ -547,7 +547,10 @@ export default async function handler(req: any, res: any) {
       const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at';
       query += ` ORDER BY t.${sortField} ${sortOrder === 'ASC' ? 'ASC' : 'DESC'}`;
 
-      const tasks = await sql.unsafe(query, params);
+      const result = await sql.unsafe(query, params);
+
+      // 处理不同的返回格式
+      const tasks = Array.isArray(result) ? result : (result?.rows || []);
 
       return res.json(tasks.map((task: any) => ({
         id: task.id,
