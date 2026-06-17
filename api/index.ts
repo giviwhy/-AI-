@@ -346,16 +346,17 @@ export default async function handler(req: any, res: any) {
       }
 
       params.push(groupId);
-      const result = await sql.unsafe(`UPDATE groups SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`, params);
+      const query = `UPDATE groups SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+      const result: any[] = await sql.unsafe(query, params);
 
-      if (result.length === 0) {
+      if (!result || result.length === 0) {
         return res.status(404).json({ message: "小组不存在" });
       }
 
       return res.json({
-        id: result[0].id,
-        name: result[0].name,
-        leaderId: result[0].leader_id,
+        id: result[0]?.id,
+        name: result[0]?.name,
+        leaderId: result[0]?.leader_id,
       });
     } catch (error: any) {
       console.error("Update group error:", error);
