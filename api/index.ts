@@ -14,45 +14,24 @@ function getPool(): NeonQueryFunction {
 
 // 初始化数据库表（5张核心表）
 async function initDatabase(sql: NeonQueryFunction) {
+  // 删除所有旧表（如果存在），以确保表结构正确
+  await sql`DROP TABLE IF EXISTS notifications CASCADE`;
+  await sql`DROP TABLE IF EXISTS attachments CASCADE`;
+  await sql`DROP TABLE IF EXISTS comments CASCADE`;
+  await sql`DROP TABLE IF EXISTS tasks CASCADE`;
+  await sql`DROP TABLE IF EXISTS users CASCADE`;
+  await sql`DROP TABLE IF EXISTS groups CASCADE`;
+
   // 1. 小组表
-  await sql`CREATE TABLE IF NOT EXISTS groups (
+  await sql`CREATE TABLE groups (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     leader_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
 
-  // 2. 用户表 - 先检查并修复表结构
-  let existingUsers: any[] = [];
-  try {
-    // 尝试获取现有用户数据（如果表存在但结构可能不完整）
-    const columns = await sql`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name = 'users'
-    `;
-    const columnNames = columns.map((c: any) => c.column_name);
-
-    // 如果缺少关键列，备份数据并重建表
-    if (!columnNames.includes('username') || !columnNames.includes('password') || !columnNames.includes('role')) {
-      // 尝试备份现有数据
-      try {
-        if (columnNames.includes('email')) {
-          existingUsers = await sql`SELECT * FROM users`;
-        }
-      } catch (e) {
-        console.log("No existing users to backup");
-      }
-
-      // 删除旧表
-      await sql`DROP TABLE IF EXISTS users CASCADE`;
-    }
-  } catch (e) {
-    // 表可能不存在，没关系
-    console.log("Users table may not exist yet");
-  }
-
-  // 创建用户表（如果已存在，CREATE TABLE IF NOT EXISTS 不会做任何操作）
-  await sql`CREATE TABLE IF NOT EXISTS users (
+  // 2. 用户表
+  await sql`CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     student_id VARCHAR(20) UNIQUE,
     phone VARCHAR(20) UNIQUE,
@@ -66,7 +45,7 @@ async function initDatabase(sql: NeonQueryFunction) {
   )`;
 
   // 3. 任务表
-  await sql`CREATE TABLE IF NOT EXISTS tasks (
+  await sql`CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT DEFAULT '',
@@ -82,7 +61,7 @@ async function initDatabase(sql: NeonQueryFunction) {
   )`;
 
   // 4. 评论表
-  await sql`CREATE TABLE IF NOT EXISTS comments (
+  await sql`CREATE TABLE comments (
     id SERIAL PRIMARY KEY,
     task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id),
@@ -91,7 +70,7 @@ async function initDatabase(sql: NeonQueryFunction) {
   )`;
 
   // 5. 附件表
-  await sql`CREATE TABLE IF NOT EXISTS attachments (
+  await sql`CREATE TABLE attachments (
     id SERIAL PRIMARY KEY,
     task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
@@ -102,7 +81,7 @@ async function initDatabase(sql: NeonQueryFunction) {
   )`;
 
   // 6. 消息通知表
-  await sql`CREATE TABLE IF NOT EXISTS notifications (
+  await sql`CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
     type VARCHAR(50) NOT NULL,
