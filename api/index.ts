@@ -458,7 +458,25 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ message: "请提供用户ID" });
       }
 
-      await sql`UPDATE users SET group_id = ${groupId} WHERE id = ${userId}`;
+      // 转换 userId 为数字
+      const userIdNum = parseInt(userId.toString());
+      if (isNaN(userIdNum)) {
+        return res.status(400).json({ message: "无效的用户ID" });
+      }
+
+      // 检查小组是否存在
+      const groupExists = await sql`SELECT id FROM groups WHERE id = ${groupId}`;
+      if (!groupExists || (Array.isArray(groupExists) && groupExists.length === 0)) {
+        return res.status(404).json({ message: "小组不存在" });
+      }
+
+      // 检查用户是否存在
+      const userExists = await sql`SELECT id FROM users WHERE id = ${userIdNum}`;
+      if (!userExists || (Array.isArray(userExists) && userExists.length === 0)) {
+        return res.status(404).json({ message: "用户不存在" });
+      }
+
+      await sql`UPDATE users SET group_id = ${groupId} WHERE id = ${userIdNum}`;
 
       return res.json({ message: "组员已添加" });
     } catch (error: any) {
