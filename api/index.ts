@@ -12,8 +12,29 @@ function getPool(): NeonQueryFunction {
   return neon(connectionString);
 }
 
+// 检查数据库是否已经初始化
+async function isDatabaseInitialized(sql: NeonQueryFunction): Promise<boolean> {
+  try {
+    // 尝试查询 users 表来检查是否已初始化
+    await sql`SELECT 1 FROM users LIMIT 1`;
+    return true;
+  } catch (error: any) {
+    // 如果表不存在，说明还没初始化
+    if (error.code === '42P01') { // relation does not exist
+      return false;
+    }
+    throw error;
+  }
+}
+
 // 初始化数据库表（5张核心表）
 async function initDatabase(sql: NeonQueryFunction) {
+  // 检查是否已经初始化
+  if (await isDatabaseInitialized(sql)) {
+    console.log("Database already initialized");
+    return;
+  }
+
   // 删除所有旧表（如果存在），以确保表结构正确
   await sql`DROP TABLE IF EXISTS notifications CASCADE`;
   await sql`DROP TABLE IF EXISTS attachments CASCADE`;
