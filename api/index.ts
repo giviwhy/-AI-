@@ -377,14 +377,17 @@ export default async function handler(req: any, res: any) {
         return res.status(404).json({ message: "小组不存在" });
       }
 
-      params.push(groupId);
-      const query = `UPDATE groups SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
-      const result: any = await sql.unsafe(query, params);
+      // 使用 sql 模板语法执行更新，更加可靠
+      let result;
+      if (name && leaderId !== undefined) {
+        result = await sql`UPDATE groups SET name = ${name}, leader_id = ${leaderId} WHERE id = ${groupId} RETURNING *`;
+      } else if (name) {
+        result = await sql`UPDATE groups SET name = ${name} WHERE id = ${groupId} RETURNING *`;
+      } else {
+        result = await sql`UPDATE groups SET leader_id = ${leaderId} WHERE id = ${groupId} RETURNING *`;
+      }
 
-      // 处理不同的返回格式
-      const rows = Array.isArray(result) ? result : (result?.rows || []);
-
-      if (!Array.isArray(rows) || rows.length === 0) {
+      if (!result || (Array.isArray(result) && result.length === 0)) {
         return res.status(500).json({ message: "更新小组失败" });
       }
 
@@ -394,9 +397,9 @@ export default async function handler(req: any, res: any) {
       }
 
       return res.json({
-        id: rows[0]?.id,
-        name: rows[0]?.name,
-        leaderId: rows[0]?.leader_id,
+        id: result[0]?.id,
+        name: result[0]?.name,
+        leaderId: result[0]?.leader_id,
       });
     } catch (error: any) {
       console.error("Update group error:", error);
