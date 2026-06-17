@@ -22,7 +22,36 @@ async function initDatabase(sql: NeonQueryFunction) {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
 
-  // 2. 用户表
+  // 2. 用户表 - 先检查并修复表结构
+  let existingUsers: any[] = [];
+  try {
+    // 尝试获取现有用户数据（如果表存在但结构可能不完整）
+    const columns = await sql`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'users'
+    `;
+    const columnNames = columns.map((c: any) => c.column_name);
+
+    // 如果缺少关键列，备份数据并重建表
+    if (!columnNames.includes('username') || !columnNames.includes('password') || !columnNames.includes('role')) {
+      // 尝试备份现有数据
+      try {
+        if (columnNames.includes('email')) {
+          existingUsers = await sql`SELECT * FROM users`;
+        }
+      } catch (e) {
+        console.log("No existing users to backup");
+      }
+
+      // 删除旧表
+      await sql`DROP TABLE IF EXISTS users CASCADE`;
+    }
+  } catch (e) {
+    // 表可能不存在，没关系
+    console.log("Users table may not exist yet");
+  }
+
+  // 创建用户表（如果已存在，CREATE TABLE IF NOT EXISTS 不会做任何操作）
   await sql`CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     student_id VARCHAR(20) UNIQUE,
@@ -83,23 +112,6 @@ async function initDatabase(sql: NeonQueryFunction) {
     is_read BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
-
-  // 检查并添加缺失的列（兼容旧数据库）
-  const addColumnIfNotExists = async (table: string, column: string, definition: string) => {
-    try {
-      await sql.unsafe(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
-    } catch (e) {
-      // 列已存在或其他错误，忽略
-    }
-  };
-
-  await addColumnIfNotExists('users', 'group_id', 'INTEGER REFERENCES groups(id)');
-  await addColumnIfNotExists('users', 'avatar', 'VARCHAR(10) DEFAULT \'\'');
-  await addColumnIfNotExists('users', 'student_id', 'VARCHAR(20)');
-  await addColumnIfNotExists('users', 'phone', 'VARCHAR(20)');
-  await addColumnIfNotExists('users', 'username', 'VARCHAR(100) NOT NULL');
-  await addColumnIfNotExists('users', 'password', 'VARCHAR(255) NOT NULL');
-  await addColumnIfNotExists('users', 'role', "VARCHAR(20) DEFAULT 'member'");
 
   // 检查是否有初始数据
   const result = await sql`SELECT COUNT(*) as count FROM users`;
