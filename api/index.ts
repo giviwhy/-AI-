@@ -246,13 +246,17 @@ export default async function handler(req: any, res: any) {
   // 获取用户列表
   if (pathname === "/api/users" && req.method === "GET") {
     try {
-      const users = await sql`
+      const usersResult = await sql`
         SELECT u.id, u.student_id, u.phone, u.email, u.username, u.role, u.group_id, u.avatar,
                g.name as group_name
         FROM users u
         LEFT JOIN groups g ON u.group_id = g.id
         ORDER BY u.id
       `;
+
+      // 处理不同的返回格式
+      const users = Array.isArray(usersResult) ? usersResult : (usersResult?.rows || []);
+
       // 添加禁用缓存的头部
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -280,13 +284,16 @@ export default async function handler(req: any, res: any) {
   // 获取小组列表
   if (pathname === "/api/groups" && req.method === "GET") {
     try {
-      const groups = await sql`
+      const groupsResult = await sql`
         SELECT g.*, u.username as leader_name,
                (SELECT COUNT(*) FROM users WHERE group_id = g.id) as member_count
         FROM groups g
         LEFT JOIN users u ON g.leader_id = u.id
         ORDER BY g.id
       `;
+
+      // 处理不同的返回格式
+      const groups = Array.isArray(groupsResult) ? groupsResult : (groupsResult?.rows || []);
       return res.json(groups.map((g: any) => ({
         id: g.id,
         name: g.name,
