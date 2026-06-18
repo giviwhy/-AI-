@@ -27,6 +27,9 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       const currentUser = JSON.parse(userData);
       const groupId = currentUser.groupId;
 
+      console.log('Fetching users for group:', groupId);
+      console.log('Current user:', currentUser);
+
       try {
         const response = await fetch('/api/users', {
           headers: {
@@ -36,12 +39,16 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
 
         if (response.ok) {
           const data = await response.json();
+          console.log('All users:', data);
+
           // 只显示当前组的成员，不包括管理员
           const filteredMembers = data.filter((u: any) => {
             const isSameGroup = groupId ? Number(u.groupId) === Number(groupId) : false;
             const isNotAdmin = u.role !== 'admin';
+            console.log(`User ${u.username}: groupId=${u.groupId}, isSameGroup=${isSameGroup}, isNotAdmin=${isNotAdmin}`);
             return isSameGroup && isNotAdmin;
           });
+          console.log('Filtered members:', filteredMembers);
           setTeamMembers(filteredMembers);
         }
       } catch (error) {
@@ -61,6 +68,13 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
     const userData = localStorage.getItem('currentUser');
     const currentUser = userData ? JSON.parse(userData) : null;
     const groupId = currentUser?.groupId ? Number(currentUser.groupId) : undefined;
+
+    console.log('Creating task with data:', {
+      title: title.trim(),
+      assigneeId,
+      groupId,
+      currentUserGroupId: currentUser?.groupId,
+    });
 
     onAdd({
       title: title.trim(),
