@@ -623,8 +623,16 @@ export default async function handler(req: any, res: any) {
       console.log('Query result type:', typeof result);
       console.log('Is array?', Array.isArray(result));
 
-      // 处理不同的返回格式
-      const tasks = Array.isArray(result) ? result : (result?.rows || []);
+      // 处理不同的返回格式 - 添加更完善的空值检查
+      let tasks: any[] = [];
+      if (Array.isArray(result)) {
+        tasks = result;
+      } else if (result && typeof result === 'object') {
+        tasks = Array.isArray(result.rows) ? result.rows : [];
+      } else {
+        console.error('Unexpected result format:', result);
+        tasks = [];
+      }
 
       console.log('Tasks after processing:', tasks);
       console.log('Tasks type:', typeof tasks);

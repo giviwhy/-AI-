@@ -31,7 +31,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       console.log('Current user:', currentUser);
 
       try {
-        const response = await fetch('/api/users', {
+        const response = await fetch(`/api/users?_=${Date.now()}`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,

@@ -31,7 +31,7 @@ function App() {
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/tasks`, {
+        const response = await fetch(`${API_URL}/api/tasks?_=${Date.now()}`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
