@@ -243,6 +243,53 @@ export default async function handler(req: any, res: any) {
 
   // ==================== 用户管理 ====================
 
+  // 获取当前用户信息
+  if (pathname === "/api/users/me" && req.method === "GET") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    try {
+      const users = await sql`
+        SELECT u.id, u.student_id, u.phone, u.email, u.username, u.role, u.group_id, u.avatar,
+               g.name as group_name, g.leader_id as group_leader_id
+        FROM users u
+        LEFT JOIN groups g ON u.group_id = g.id
+        WHERE u.id = ${decoded.userId}
+      `;
+
+      if (users.length === 0) {
+        return res.status(404).json({ message: "用户不存在" });
+      }
+
+      const user = users[0];
+
+      // 添加禁用缓存的头部
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+
+      return res.json({
+        id: user.id,
+        studentId: user.student_id,
+        phone: user.phone,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        groupId: user.group_id,
+        groupName: user.group_name,
+        isLeader: user.group_leader_id === user.id,
+        avatar: user.avatar,
+      });
+    } catch (error: any) {
+      console.error("Get current user error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
   // 获取用户列表
   if (pathname === "/api/users" && req.method === "GET") {
     try {

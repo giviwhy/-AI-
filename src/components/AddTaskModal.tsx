@@ -63,19 +63,35 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    const userData = localStorage.getItem('currentUser');
-    const currentUser = userData ? JSON.parse(userData) : null;
-    const groupId = currentUser?.groupId ? Number(currentUser.groupId) : undefined;
+    // 从后端获取当前用户的信息，确保 groupId 正确
+    const token = localStorage.getItem('token');
+    let groupId: number | undefined;
+
+    try {
+      const response = await fetch(`/api/users/me?_=${Date.now()}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      });
+
+      if (response.ok) {
+        const userInfo = await response.json();
+        groupId = userInfo.groupId;
+      }
+    } catch (error) {
+      console.error('Failed to fetch current user info:', error);
+    }
 
     console.log('Creating task with data:', {
       title: title.trim(),
       assigneeId,
       groupId,
-      currentUserGroupId: currentUser?.groupId,
     });
 
     onAdd({
