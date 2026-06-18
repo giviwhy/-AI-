@@ -37,9 +37,11 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
         if (response.ok) {
           const data = await response.json();
           // 只显示当前组的成员，不包括管理员
-          const filteredMembers = data.filter((u: any) =>
-            u.groupId === currentGroupId && u.role !== 'admin'
-          );
+          const filteredMembers = data.filter((u: any) => {
+            const isSameGroup = currentGroupId ? u.groupId === currentGroupId : false;
+            const isNotAdmin = u.role !== 'admin';
+            return isSameGroup && isNotAdmin;
+          });
           setTeamMembers(filteredMembers);
         }
       } catch (error) {

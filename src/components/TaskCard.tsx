@@ -39,7 +39,10 @@ export default function TaskCard({ task, onDragStart, onDragEnd, onDelete, onCli
             {priorityLabels[task.priority]}
           </span>
           <button
-            onClick={() => onDelete(task.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(task.id);
+            }}
             className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
             title="删除任务"
           >
