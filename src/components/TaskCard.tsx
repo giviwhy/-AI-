@@ -22,12 +22,19 @@ const priorityLabels = {
 };
 
 export default function TaskCard({ task, onDragStart, onDragEnd, onDelete, onClick }: TaskCardProps) {
+  const handleClick = () => {
+    // 只在不是拖拽操作时触发点击
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={onDragEnd}
-      onClick={onClick}
+      onClick={handleClick}
       className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group"
     >
       <div className="flex items-start justify-between mb-3">

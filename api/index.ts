@@ -552,6 +552,8 @@ export default async function handler(req: any, res: any) {
       const currentUser = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
       const userGroupId = currentUser[0]?.group_id;
 
+      console.log('Fetching tasks for user:', decoded.userId, 'with group:', userGroupId, 'role:', decoded.role);
+
       let query = `
         SELECT t.*, 
                u1.username as creator_name, u1.avatar as creator_avatar,
@@ -573,11 +575,15 @@ export default async function handler(req: any, res: any) {
         if (userGroupId) {
           conditions.push(`t.group_id = $${paramIndex++}`);
           params.push(userGroupId);
+          console.log('Adding filter: t.group_id =', userGroupId);
         } else {
           // 没有小组的用户看不到任何任务
           conditions.push(`t.group_id = $${paramIndex++}`);
           params.push(-1);
+          console.log('User has no group, filtering out all tasks');
         }
+      } else {
+        console.log('User is admin, showing all tasks');
       }
 
       if (status) {
@@ -608,8 +614,21 @@ export default async function handler(req: any, res: any) {
 
       const result = await sql.unsafe(query, params);
 
+      console.log('Query result:', result);
+      console.log('Query result type:', typeof result);
+      console.log('Is array?', Array.isArray(result));
+
       // 处理不同的返回格式
       const tasks = Array.isArray(result) ? result : (result?.rows || []);
+
+      console.log('Tasks after processing:', tasks);
+      console.log('Tasks type:', typeof tasks);
+      console.log('Is tasks array?', Array.isArray(tasks));
+
+      if (!Array.isArray(tasks)) {
+        console.error('Tasks is not an array:', tasks);
+        return res.json([]);
+      }
 
       return res.json(tasks.map((task: any) => ({
         id: task.id,
@@ -651,11 +670,21 @@ export default async function handler(req: any, res: any) {
     try {
       const { title, description, dueDate, priority, assigneeId, groupId, tags } = req.body || {};
 
+      console.log('Creating task with data:', {
+        title,
+        assigneeId,
+        groupId,
+        creatorId: decoded.userId,
+        creatorRole: decoded.role,
+      });
+
       const result = await sql`
         INSERT INTO tasks (title, description, due_date, priority, status, creator_id, assignee_id, group_id, tags, created_at, updated_at)
         VALUES (${title || ''}, ${description || ''}, ${dueDate || null}, ${priority || 'medium'}, ${'todo'}, ${decoded.userId}, ${assigneeId || null}, ${groupId || null}, ${tags || []}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING *
       `;
+
+      console.log('Task created successfully:', result[0]);
 
       // 发送通知给负责人
       if (assigneeId) {
