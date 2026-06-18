@@ -120,6 +120,8 @@ function App() {
         const newTask: Task = {
           ...data,
           id: String(data.id),
+          assignee: data.assigneeName || taskData.assignee || '未分配',
+          assigneeId: data.assigneeId || taskData.assigneeId,
         };
         setTasks((prevTasks) => [...prevTasks, newTask]);
       }

@@ -17,7 +17,6 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [currentGroupId, setCurrentGroupId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -27,7 +26,6 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
 
       const currentUser = JSON.parse(userData);
       const groupId = currentUser.groupId;
-      setCurrentGroupId(groupId || null);
 
       try {
         const response = await fetch('/api/users', {
@@ -60,6 +58,10 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
     e.preventDefault();
     if (!title.trim()) return;
 
+    const userData = localStorage.getItem('currentUser');
+    const currentUser = userData ? JSON.parse(userData) : null;
+    const groupId = currentUser?.groupId ? Number(currentUser.groupId) : undefined;
+
     onAdd({
       title: title.trim(),
       description: description.trim(),
@@ -67,7 +69,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       priority,
       assignee: assigneeId ? teamMembers.find(m => m.id === assigneeId)?.username || '未分配' : '未分配',
       assigneeId: assigneeId || undefined,
-      groupId: currentGroupId || undefined,
+      groupId: groupId,
       dueDate: dueDate || new Date().toISOString().split('T')[0],
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
     });
