@@ -17,6 +17,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [currentGroupId, setCurrentGroupId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -25,7 +26,8 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       if (!token || !userData) return;
 
       const currentUser = JSON.parse(userData);
-      const currentGroupId = currentUser.groupId;
+      const groupId = currentUser.groupId;
+      setCurrentGroupId(groupId || null);
 
       try {
         const response = await fetch('/api/users', {
@@ -38,7 +40,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
           const data = await response.json();
           // 只显示当前组的成员，不包括管理员
           const filteredMembers = data.filter((u: any) => {
-            const isSameGroup = currentGroupId ? u.groupId === currentGroupId : false;
+            const isSameGroup = groupId ? u.groupId === groupId : false;
             const isNotAdmin = u.role !== 'admin';
             return isSameGroup && isNotAdmin;
           });
@@ -64,6 +66,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       status: initialStatus,
       priority,
       assignee: assignee || '未分配',
+      groupId: currentGroupId,
       dueDate: dueDate || new Date().toISOString().split('T')[0],
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
     });
