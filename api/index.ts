@@ -608,7 +608,8 @@ export default async function handler(req: any, res: any) {
       const sortOrder = url.searchParams.get('sortOrder') || 'DESC';
 
       // 获取当前用户的组信息
-      const currentUser = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+      const currentUserResult = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+      const currentUser = Array.isArray(currentUserResult) ? currentUserResult : (currentUserResult?.rows || []);
       const userGroupId = currentUser[0]?.group_id;
 
       console.log('Fetching tasks for user:', decoded.userId, 'with group:', userGroupId, 'role:', decoded.role);
