@@ -13,11 +13,14 @@ export default function TaskDetailModal({ task, onClose }: TaskDetailModalProps)
     low: '低优先级',
   };
 
-  const statusLabels = {
+  const statusLabels: Record<string, string> = {
     todo: '待办',
-    in_progress: '进行中',
+    'in-progress': '进行中',
     review: '审核中',
     done: '已完成',
+    cancelled: '已取消',
+    'needs-revision': '需要修改',
+    overdue: '已逾期',
   };
 
   return (
@@ -40,19 +43,17 @@ export default function TaskDetailModal({ task, onClose }: TaskDetailModalProps)
               {task.title}
             </h3>
             <div className="flex gap-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-green-100 text-green-700'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                  task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-green-100 text-green-700'
+                }`}>
                 {priorityLabels[task.priority]}
               </span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                task.status === 'done' ? 'bg-green-100 text-green-700' :
-                task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                task.status === 'review' ? 'bg-purple-100 text-purple-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${task.status === 'done' ? 'bg-green-100 text-green-700' :
+                  task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                    task.status === 'review' ? 'bg-purple-100 text-purple-700' :
+                      'bg-gray-100 text-gray-700'
+                }`}>
                 {statusLabels[task.status]}
               </span>
             </div>

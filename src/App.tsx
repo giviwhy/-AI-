@@ -21,7 +21,6 @@ function App() {
   const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>('todo');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTasks = async () => {
