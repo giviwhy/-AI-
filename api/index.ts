@@ -939,13 +939,16 @@ export default async function handler(req: any, res: any) {
     try {
       const taskId = parseInt(pathname.split("/")[3]);
 
-      const attachments = await sql`
+      const attachmentsResult = await sql`
         SELECT a.*, u.username as uploader_name
         FROM attachments a
         JOIN users u ON a.uploader_id = u.id
         WHERE a.task_id = ${taskId}
         ORDER BY a.created_at DESC
       `;
+
+      // 处理不同的返回格式
+      const attachments = Array.isArray(attachmentsResult) ? attachmentsResult : (attachmentsResult?.rows || []);
 
       return res.json(attachments.map((a: any) => ({
         id: a.id,
@@ -1059,13 +1062,16 @@ export default async function handler(req: any, res: any) {
     try {
       const taskId = parseInt(pathname.split("/")[3]);
 
-      const comments = await sql`
+      const commentsResult = await sql`
         SELECT c.*, u.username, u.avatar
         FROM comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.task_id = ${taskId}
         ORDER BY c.created_at DESC
       `;
+
+      // 处理不同的返回格式
+      const comments = Array.isArray(commentsResult) ? commentsResult : (commentsResult?.rows || []);
 
       return res.json(comments.map((c: any) => ({
         id: c.id,
@@ -1140,12 +1146,15 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-      const notifications = await sql`
+      const notificationsResult = await sql`
         SELECT * FROM notifications
         WHERE user_id = ${decoded.userId}
         ORDER BY created_at DESC
         LIMIT 50
       `;
+
+      // 处理不同的返回格式
+      const notifications = Array.isArray(notificationsResult) ? notificationsResult : (notificationsResult?.rows || []);
 
       return res.json(notifications.map((n: any) => ({
         id: n.id,
@@ -1209,16 +1218,19 @@ export default async function handler(req: any, res: any) {
       let memberIds: number[] = [];
 
       if (decoded.role === 'leader') {
-        const user = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+        const userResult = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+        const user = Array.isArray(userResult) ? userResult : (userResult?.rows || []);
         if (user.length === 0 || !user[0].group_id) {
           return res.status(400).json({ message: "组长未分配到小组" });
         }
 
-        const members = await sql`SELECT id FROM users WHERE group_id = ${user[0].group_id}`;
+        const membersResult = await sql`SELECT id FROM users WHERE group_id = ${user[0].group_id}`;
+        const members = Array.isArray(membersResult) ? membersResult : (membersResult?.rows || []);
         memberIds = members.map((m: any) => m.id);
       } else {
         // 管理员可以向所有成员发送通知
-        const members = await sql`SELECT id FROM users WHERE role = 'member'`;
+        const membersResult = await sql`SELECT id FROM users WHERE role = 'member'`;
+        const members = Array.isArray(membersResult) ? membersResult : (membersResult?.rows || []);
         memberIds = members.map((m: any) => m.id);
       }
 
@@ -1310,9 +1322,9 @@ export default async function handler(req: any, res: any) {
 
     try {
       // 小组任务统计
-      let groupStats = [];
+      let groupStatsResult = [];
       if (decoded.role === 'leader' || decoded.role === 'admin') {
-        groupStats = await sql`
+        groupStatsResult = await sql`
           SELECT 
             g.id, g.name,
             COUNT(t.id) as total_tasks,
@@ -1323,9 +1335,11 @@ export default async function handler(req: any, res: any) {
           GROUP BY g.id, g.name
         `;
       }
+      // 处理不同的返回格式
+      const groupStats = Array.isArray(groupStatsResult) ? groupStatsResult : (groupStatsResult?.rows || []);
 
       // 个人任务统计
-      const personalStats = await sql`
+      const personalStatsResult = await sql`
         SELECT 
           COUNT(*) as total_tasks,
           COUNT(CASE WHEN status = 'done' THEN 1 END) as completed_tasks,
@@ -1335,14 +1349,18 @@ export default async function handler(req: any, res: any) {
         FROM tasks
         WHERE assignee_id = ${decoded.userId}
       `;
+      // 处理不同的返回格式
+      const personalStats = Array.isArray(personalStatsResult) ? personalStatsResult : (personalStatsResult?.rows || []);
 
       // 任务状态分布
-      const statusDistribution = await sql`
+      const statusDistributionResult = await sql`
         SELECT status, COUNT(*) as count
         FROM tasks
         WHERE group_id = (SELECT group_id FROM users WHERE id = ${decoded.userId})
         GROUP BY status
       `;
+      // 处理不同的返回格式
+      const statusDistribution = Array.isArray(statusDistributionResult) ? statusDistributionResult : (statusDistributionResult?.rows || []);
 
       return res.json({
         groupStats: groupStats.map((s: any) => ({
