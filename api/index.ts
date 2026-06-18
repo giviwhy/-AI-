@@ -744,17 +744,26 @@ export default async function handler(req: any, res: any) {
     try {
       const { title, description, dueDate, priority, assigneeId, groupId, tags } = req.body || {};
 
+      // 获取创建者的小组信息，确保任务关联到正确的小组
+      const creatorResult = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+      const creator = Array.isArray(creatorResult) ? creatorResult : (creatorResult?.rows || []);
+      const creatorGroupId = creator[0]?.group_id;
+
+      // 使用请求中的 groupId，如果没有则使用创建者的 groupId
+      const finalGroupId = groupId || creatorGroupId;
+
       console.log('Creating task with data:', {
         title,
         assigneeId,
-        groupId,
+        groupId: finalGroupId,
         creatorId: decoded.userId,
         creatorRole: decoded.role,
+        creatorGroupId,
       });
 
       const result = await sql`
         INSERT INTO tasks (title, description, due_date, priority, status, creator_id, assignee_id, group_id, tags, created_at, updated_at)
-        VALUES (${title || ''}, ${description || ''}, ${dueDate || null}, ${priority || 'medium'}, ${'todo'}, ${decoded.userId}, ${assigneeId || null}, ${groupId || null}, ${tags || []}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES (${title || ''}, ${description || ''}, ${dueDate || null}, ${priority || 'medium'}, ${'todo'}, ${decoded.userId}, ${assigneeId || null}, ${finalGroupId}, ${tags || []}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING *
       `;
 
@@ -784,6 +793,82 @@ export default async function handler(req: any, res: any) {
       });
     } catch (error: any) {
       console.error("Create task error:", error);
+      return res.status(500).json({ message: "服务器错误: " + error.message });
+    }
+  }
+
+  // 获取单个任务详情
+  if (pathname.match(/^\/api\/tasks\/\d+$/) && req.method === "GET") {
+    const decoded = await verifyToken(req.headers["authorization"]);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "未提供认证令牌" });
+    }
+
+    try {
+      const taskId = parseInt(pathname.split("/")[3]);
+
+      // 获取任务信息
+      const taskResult = await sql`
+        SELECT t.*, 
+               u1.username as creator_name, u1.avatar as creator_avatar,
+               u2.username as assignee_name, u2.avatar as assignee_avatar,
+               g.name as group_name
+        FROM tasks t
+        LEFT JOIN users u1 ON t.creator_id = u1.id
+        LEFT JOIN users u2 ON t.assignee_id = u2.id
+        LEFT JOIN groups g ON t.group_id = g.id
+        WHERE t.id = ${taskId}
+      `;
+
+      const taskResultArray = Array.isArray(taskResult) ? taskResult : (taskResult?.rows || []);
+
+      if (taskResultArray.length === 0) {
+        return res.status(404).json({ message: "任务不存在" });
+      }
+
+      const task = taskResultArray[0];
+
+      // 权限检查：管理员可以看到所有任务，其他用户只能看到自己小组的任务
+      if (decoded.role !== 'admin') {
+        // 获取当前用户的组信息
+        const currentUserResult = await sql`SELECT group_id FROM users WHERE id = ${decoded.userId}`;
+        const currentUser = Array.isArray(currentUserResult) ? currentUserResult : (currentUserResult?.rows || []);
+        const userGroupId = currentUser[0]?.group_id;
+
+        // 检查任务是否属于用户所在的小组
+        if (task.group_id !== userGroupId) {
+          return res.status(403).json({ message: "无权查看此任务" });
+        }
+      }
+
+      // 添加禁用缓存的头部
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+
+      return res.json({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        dueDate: task.due_date,
+        priority: task.priority,
+        status: task.status,
+        creatorId: task.creator_id,
+        creatorName: task.creator_name,
+        creatorAvatar: task.creator_avatar,
+        assigneeId: task.assignee_id,
+        assigneeName: task.assignee_name,
+        assigneeAvatar: task.assignee_avatar,
+        groupId: task.group_id,
+        groupName: task.group_name,
+        tags: task.tags,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+      });
+    } catch (error: any) {
+      console.error("Get task error:", error);
       return res.status(500).json({ message: "服务器错误: " + error.message });
     }
   }
