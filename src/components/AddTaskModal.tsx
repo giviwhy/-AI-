@@ -13,7 +13,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [assignee, setAssignee] = useState('');
+  const [assigneeId, setAssigneeId] = useState<number | null>(null);
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -40,7 +40,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
           const data = await response.json();
           // 只显示当前组的成员，不包括管理员
           const filteredMembers = data.filter((u: any) => {
-            const isSameGroup = groupId ? u.groupId === groupId : false;
+            const isSameGroup = groupId ? Number(u.groupId) === Number(groupId) : false;
             const isNotAdmin = u.role !== 'admin';
             return isSameGroup && isNotAdmin;
           });
@@ -65,8 +65,9 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
       description: description.trim(),
       status: initialStatus,
       priority,
-      assignee: assignee || '未分配',
-      groupId: currentGroupId,
+      assignee: assigneeId ? teamMembers.find(m => m.id === assigneeId)?.username || '未分配' : '未分配',
+      assigneeId: assigneeId || undefined,
+      groupId: currentGroupId || undefined,
       dueDate: dueDate || new Date().toISOString().split('T')[0],
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
     });
@@ -74,7 +75,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
     setTitle('');
     setDescription('');
     setPriority('medium');
-    setAssignee('');
+    setAssigneeId(null);
     setDueDate('');
     setTags('');
     onClose();
@@ -157,14 +158,14 @@ export default function AddTaskModal({ isOpen, onClose, onAdd, initialStatus }: 
               负责人
             </label>
             <select
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
+              value={assigneeId || ''}
+              onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             >
               <option value="">未分配</option>
               {teamMembers.map((member) => (
-                <option key={member.id} value={member.username || member.name}>
-                  {member.username || member.name} ({member.role === 'leader' ? '组长' : member.role === 'admin' ? '管理员' : '组员'})
+                <option key={member.id} value={member.id}>
+                  {member.username || member.name} ({member.role === 'leader' ? '组长' : '组员'})
                 </option>
               ))}
             </select>
