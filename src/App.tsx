@@ -32,9 +32,11 @@ function App() {
 
       try {
         const response = await fetch(`${API_URL}/api/tasks`, {
+          method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          cache: 'no-store',
         });
 
         if (response.ok) {
