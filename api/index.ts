@@ -253,6 +253,11 @@ export default async function handler(req: any, res: any) {
         LEFT JOIN groups g ON u.group_id = g.id
         ORDER BY u.id
       `;
+      // 添加禁用缓存的头部
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
       return res.json(users.map((u: any) => ({
         id: u.id,
         studentId: u.student_id,
@@ -629,6 +634,12 @@ export default async function handler(req: any, res: any) {
         console.error('Tasks is not an array:', tasks);
         return res.json([]);
       }
+
+      // 添加禁用缓存的头部
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
 
       return res.json(tasks.map((task: any) => ({
         id: task.id,
