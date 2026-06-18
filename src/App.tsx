@@ -148,7 +148,6 @@ function App() {
 
   const handleViewTask = useCallback((task: Task) => {
     setSelectedTask(task);
-    setIsDetailModalOpen(true);
   }, []);
 
   const handleOpenAddModal = (status: string) => {
@@ -214,7 +213,6 @@ function App() {
           <TaskDetailModal
             task={selectedTask}
             onClose={() => {
-              setIsDetailModalOpen(false);
               setSelectedTask(null);
             }}
           />
